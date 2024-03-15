@@ -85,6 +85,7 @@
                     <property name="tooltip-text" translatable="yes">Select the file to encode.</property>
                     <property name="filter">video_file_filter</property>
                     <property name="title" translatable="yes">Video file to encode</property>
+                    <signal name="file-set" handler="fbtn_input_file_file_set_cb" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
