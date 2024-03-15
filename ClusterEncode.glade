@@ -47,7 +47,7 @@
     <property name="step-increment">1</property>
     <property name="page-increment">10</property>
   </object>
-  <template class="app_window" parent="GtkApplicationWindow">
+  <object class="GtkApplicationWindow" id="app_window">
     <property name="can-focus">False</property>
     <property name="default-width">200</property>
     <property name="default-height">250</property>
@@ -1130,9 +1130,6 @@
                           <object class="GtkListBox" id="lbox_hosts">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <child type="placeholder">
-                              <placeholder/>
-                            </child>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -1422,5 +1419,5 @@
         </child>
       </object>
     </child>
-  </template>
+  </object>
 </interface>
