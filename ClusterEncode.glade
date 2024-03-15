@@ -51,6 +51,7 @@
     <property name="can-focus">False</property>
     <property name="default-width">200</property>
     <property name="default-height">250</property>
+    <signal name="destroy" handler="on_destroy" swapped="no"/>
     <child>
       <object class="GtkNotebook">
         <property name="visible">True</property>
@@ -1080,6 +1081,19 @@
                     <property name="fill">True</property>
                     <property name="padding">5</property>
                     <property name="position">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="btn_start_encode">
+                    <property name="label" translatable="yes">Start Encode</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">4</property>
                   </packing>
                 </child>
               </object>
