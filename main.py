@@ -20,7 +20,7 @@ class SignalHandlers:
     @staticmethod
     def fbtn_input_file_file_set_cb(widget, *_args):
         file_path = widget.get_file()
-        print(dir(file_path))
+        print(file_path.get_path())
         return
 
 
