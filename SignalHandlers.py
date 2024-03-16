@@ -81,8 +81,9 @@ class SignalHandlers:
         file_path = widget.get_file().get_path()
         # Load the media info:
         media_info = MediaInfo.parse(file_path)  # TODO: This causes the dialog to hang on large files.
-        # Set the input audio labels:
+        # Set the input audio/video labels:
         self._set_input_audio_properties(media_info)
+        self._set_input_video_properties(media_info)
         return
 
 
