@@ -2,8 +2,12 @@
 """
     File: SignalHandlers.py
 """
-from gi.repository import Gtk
 from pymediainfo import MediaInfo
+
+import gi
+gi.require_version("Gtk", "3.0")
+
+from gi.repository import Gtk
 
 
 class SignalHandlers:
