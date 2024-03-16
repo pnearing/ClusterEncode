@@ -17,7 +17,12 @@ class SignalHandlers:
         self._builder = builder
         return
 
-    def _set_input_audio_properties(self, media_info: MediaInfo):
+    def _set_input_audio_properties(self, media_info: MediaInfo) -> None:
+        """
+        Set the input audio info labels.
+        :param media_info: MediaInfo: The media info object for the input file.
+        :return: None
+        """
         # Get and set the number of audio tracks:
         num_audio_tracks = media_info.general_tracks[0].count_of_audio_streams
         lbl_audio_tracks = self._builder.get_object('lbl_input_audio_num_tracks')
@@ -36,11 +41,33 @@ class SignalHandlers:
         lbl_codec.set_label(codec)
         # Get and set the duration:
         duration = media_info.audio_tracks[0].duration
-        delta_duration = datetime.timedelta(seconds=float(duration))
         lbl_duration = self._builder.get_object('lbl_input_audio_duration')
-        lbl_duration.set_label(str(delta_duration))
+        lbl_duration.set_label(duration + " frames")
         return
 
+    def _set_input_video_properties(self, media_info: MediaInfo) -> None:
+        """
+        Set the video info properties.
+        :param media_info: MediaInfo: The media info object for the input video.
+        :return: None
+        """
+        # Get and set the codec:
+        codec = media_info.video_tracks[0].commercial_name
+        lbl_codec = self._builder.get_object('lbl_input_video_codec')
+        lbl_codec.set_label(codec)
+        # Get and set width:
+        width = media_info.video_tracks[0].width
+        lbl_width = self._builder.get_object('lbl_input_video_width')
+        lbl_width.set_label(str(width))
+        # Get and set the height:
+        height = media_info.video_tracks[0].height
+        lbl_height = self._builder.get_object('lbl_input_video_height')
+        lbl_height.set_label(str(height))
+        # Get and set the duration:
+        duration = media_info.video_tracks[0].duration
+        lbl_duration = self._builder.get_object('lbl_input_video_duration')
+        lbl_duration.set_label(duration + ' frames')
+        return
     ##############################
     # Signal Handlers:
     ##############################
