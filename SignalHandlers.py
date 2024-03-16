@@ -2,6 +2,8 @@
 """
     File: SignalHandlers.py
 """
+import datetime
+
 from pymediainfo import MediaInfo
 
 import gi
@@ -28,6 +30,15 @@ class SignalHandlers:
         bit_rate = media_info.audio_tracks[0].bit_rate
         lbl_bit_rate = self._builder.get_object('lbl_input_audio_bit_rate')
         lbl_bit_rate.set_label(str(bit_rate))
+        # Get and set the codec:
+        codec = media_info.audio_tracks[0].commercial_name
+        lbl_codec = self._builder.get_object('lbl_input_audio_codec')
+        lbl_codec.set_label(codec)
+        # Get and set the duration:
+        duration = media_info.audio_tracks[0].duration
+        delta_duration = datetime.timedelta(seconds=duration)
+        lbl_duration = self._builder.get_object('lbl_input_audio_duration')
+        lbl_duration.set_label(str(delta_duration))
         return
 
     ##############################
@@ -42,7 +53,7 @@ class SignalHandlers:
         # Get the file path from the widget:
         file_path = widget.get_file().get_path()
         # Load the media info:
-        media_info = MediaInfo.parse(file_path)
+        media_info = MediaInfo.parse(file_path)  # TODO: This causes the dialog to hang on large files.
         # Set the input audio labels:
         self._set_input_audio_properties(media_info)
         return
