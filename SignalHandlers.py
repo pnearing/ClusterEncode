@@ -36,7 +36,7 @@ class SignalHandlers:
         lbl_codec.set_label(codec)
         # Get and set the duration:
         duration = media_info.audio_tracks[0].duration
-        delta_duration = datetime.timedelta(seconds=duration)
+        delta_duration = datetime.timedelta(seconds=float(duration))
         lbl_duration = self._builder.get_object('lbl_input_audio_duration')
         lbl_duration.set_label(str(delta_duration))
         return
