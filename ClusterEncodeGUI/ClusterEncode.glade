@@ -19,6 +19,7 @@
             <child>
               <object class="GtkButton">
                 <property name="label">gtk-cancel</property>
+                <property name="name">btn_add_host_cancel</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
@@ -33,6 +34,7 @@
             <child>
               <object class="GtkButton">
                 <property name="label">gtk-add</property>
+                <property name="name">btn_add_host_add</property>
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
@@ -75,6 +77,7 @@
                 </child>
                 <child>
                   <object class="GtkEntry">
+                    <property name="name">ent_add_host_name</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="placeholder-text" translatable="yes">Unique Name</property>
@@ -113,6 +116,7 @@
                 </child>
                 <child>
                   <object class="GtkEntry">
+                    <property name="name">ent_add_host_ip</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="placeholder-text" translatable="yes">127.0.0.1</property>
@@ -150,6 +154,7 @@
                 </child>
                 <child>
                   <object class="GtkEntry">
+                    <property name="name">ent_add_host_port</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="text" translatable="yes">65500</property>
@@ -174,10 +179,50 @@
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">Shared Secret:</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="padding">5</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry">
+                    <property name="name">ent_add_host_passwd</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="placeholder-text" translatable="yes">Password</property>
+                    <property name="input-purpose">password</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="padding">5</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
                 <property name="homogeneous">True</property>
                 <child>
                   <object class="GtkButton">
                     <property name="label" translatable="yes">Test</property>
+                    <property name="name">btn_add_host_test</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="receives-default">True</property>
@@ -191,7 +236,6 @@
                 <child>
                   <object class="GtkImage">
                     <property name="name">img_test_success</property>
-                    <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="no-show-all">True</property>
                     <property name="stock">gtk-apply</property>
@@ -220,7 +264,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">3</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>
