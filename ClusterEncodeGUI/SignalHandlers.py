@@ -40,9 +40,9 @@ class SignalHandlers:
         lbl_codec = self._builder.get_object('lbl_input_audio_codec')
         lbl_codec.set_label(codec)
         # Get and set the duration:
-        duration = media_info.audio_tracks[0].duration
+        duration = media_info.audio_tracks[0].other_duration[0]
         lbl_duration = self._builder.get_object('lbl_input_audio_duration')
-        lbl_duration.set_label(duration + " frames")
+        lbl_duration.set_label(duration)
         return
 
     def _set_input_video_properties(self, media_info: MediaInfo) -> None:
@@ -64,9 +64,9 @@ class SignalHandlers:
         lbl_height = self._builder.get_object('lbl_input_video_height')
         lbl_height.set_label(str(height))
         # Get and set the duration:
-        duration = media_info.video_tracks[0].duration
+        duration = media_info.video_tracks[0].other_duration[0]
         lbl_duration = self._builder.get_object('lbl_input_video_duration')
-        lbl_duration.set_label(duration + ' frames')
+        lbl_duration.set_label(duration)
         return
     ##############################
     # Signal Handlers:
