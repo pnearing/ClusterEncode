@@ -2,15 +2,14 @@
 """
     File: SignalHandlers.py
 """
-import datetime
 
 from pymediainfo import MediaInfo
 
 import gi
 gi.require_version("Gtk", "3.0")
 
-from gi.repository import Gtk
-
+from gi.repository import Gtk, GObject
+GObject.threads_init()
 
 class SignalHandlers:
     def __init__(self, builder: Gtk.Builder) -> None:
@@ -68,6 +67,7 @@ class SignalHandlers:
         lbl_duration = self._builder.get_object('lbl_input_video_duration')
         lbl_duration.set_label(duration)
         return
+
     ##############################
     # Signal Handlers:
     ##############################
