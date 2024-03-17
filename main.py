@@ -66,8 +66,10 @@ def create_default_config():
 
 
 if __name__ == '__main__':
+    # Create GUI:
+    builder.add_from_file("ClusterEncode.glade")
 
-    # Locate local working directory, create it if required, and change to it:
+    # Locate the local working directory, create it if required, and change to it:
     common.working_dir = os.path.join(os.environ['HOME'], WORKING_DIR_NAME)
     if not os.path.exists(common.working_dir):
         create_working_directory()
@@ -80,9 +82,7 @@ if __name__ == '__main__':
     else:
         create_default_config()
 
-    # Create GUI:
-    builder.add_from_file("ClusterEncode.glade")
-    # Connect signals:
+    # Connect GUI signals:
     builder.connect_signals(SignalHandlers(builder))
 
     # Set cluster settings:
