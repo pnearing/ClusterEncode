@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-    File: cluster_encode_gui.py
+    File: main.py
 """
 import json
 import os
