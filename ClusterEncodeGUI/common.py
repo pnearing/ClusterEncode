@@ -11,7 +11,7 @@ config_path: str = ''
 """The path to the config file."""
 config: dict[str, Any] = {
     'version': '1.0',
-    'shared_dir': '/media/streak/Quays/convert/Working',
+    'shared_dir': '/mnt/convert/',
     'output_dir': '/media/streak/Quays/convert/Output',
     'hosts': {
         'localhost': {
