@@ -5,6 +5,7 @@
 import json
 import os
 from typing import Optional, Final
+from pymediainfo import MediaInfo
 
 import common
 from SignalHandlers import SignalHandlers
@@ -14,7 +15,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Gio
-from pymediainfo import MediaInfo
+
 
 # Consts:
 WORKING_DIR_NAME: Final[str] = '.ClusterEncode'
@@ -85,10 +86,14 @@ if __name__ == '__main__':
     # Connect GUI signals:
     builder.connect_signals(SignalHandlers(builder))
 
-    # Set input directory:
+    # Set input/ output / shared directory for the file chooser buttons:
     shared_path = common.config['sharedDir']
     input_file_object = builder.get_object("fbtn_input_file")
+    shared_dir_object = builder.get_object("fbtn_shared_directory")
+    output_dir_object = builder.get_object("fbtn_output_directory")
     input_file_object.set_current_folder(shared_path)
+    shared_dir_object.set_current_folder(shared_path)
+    output_dir_object.set_current_folder(shared_path)
 
     # Get and show the window:
     window = builder.get_object("app_window")
