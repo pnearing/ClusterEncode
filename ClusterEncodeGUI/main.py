@@ -86,9 +86,9 @@ if __name__ == '__main__':
     builder.connect_signals(SignalHandlers(builder))
 
     # Set input directory:
-    # shared_path = common.config['sharedDir']
-    # input_file_object = builder.get_object("fbtn_input_file")
-    # input_file_object.set_directory(shared_path)
+    shared_path = common.config['sharedDir']
+    input_file_object = builder.get_object("fbtn_input_file")
+    input_file_object.set_directory(shared_path)
 
     # Get and show the window:
     window = builder.get_object("app_window")
