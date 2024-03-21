@@ -12,11 +12,12 @@ config_path: str = ''
 config: dict[str, Any] = {
     'version': '1.0',
     'sharedDir': '/mnt/convert/',
-    'outputDir': '/media/streak/Quays/convert/Output',
+    'outputDir': '/mnt/convert/Output',
     'hosts': {
         'localhost': {
             'host': '127.0.0.1',
             'port': 65500,
+            'isFileHost': False,
         },
     }
 }
