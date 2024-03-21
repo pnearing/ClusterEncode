@@ -7,9 +7,9 @@ from pymediainfo import MediaInfo
 
 import gi
 gi.require_version("Gtk", "3.0")
-
-from gi.repository import Gtk, GObject
+from gi.repository import Gtk, GObject, Gio
 GObject.threads_init()
+
 
 class SignalHandlers:
     def __init__(self, builder: Gtk.Builder) -> None:
@@ -84,6 +84,9 @@ class SignalHandlers:
         # Set the input audio/video labels:
         self._set_input_audio_properties(media_info)
         self._set_input_video_properties(media_info)
+        # Enable the 'encode' button:
+        encode_button = self._builder.get_object('btn_start_encode')
+        encode_button.set_sensitive(True)
         return
 
 
