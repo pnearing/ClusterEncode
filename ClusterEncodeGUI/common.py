@@ -2,7 +2,16 @@
 """
     File: common.py
 """
-from typing import Any
+import sys
+import json
+from typing import Any, Final
+from gi.repository import Gtk
+sys.path.append('../')
+from ffmpegCli.Ffmpegcli import Ffmpegcli
+
+# Constants:
+__version__: Final[str] = '1.0.0'
+
 
 # Common variables:
 working_dir: str = ''
@@ -21,7 +30,20 @@ config: dict[str, Any] = {
         },
     }
 }
-"""The custer encode config dict."""
+"""The custer encode GUI config dict."""
+builder: Gtk.Builder
+"""The common Gtk.Builder object."""
+ffpmeg_cli: Ffmpegcli
 
-if __name__ == '__main__':
-    exit(0)
+def save_config() -> None:
+    """
+    Save the config file. If unable to save, exit's 10 on OSError.
+    :return: None
+    """
+    try:
+        with open(config_path, 'w') as file_handle:
+            file_handle.write(json.dumps(config, indent=4))
+    except OSError as e:
+        print("Failed to open config file for writing.")
+        exit(10)
+    return
