@@ -6,7 +6,7 @@ import os.path
 import shutil
 import subprocess
 from typing import Optional
-from SplitThread import SplitThread
+from .SplitThread import SplitThread
 
 
 class ffmpegCli(object):
