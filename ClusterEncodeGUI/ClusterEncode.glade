@@ -972,6 +972,7 @@
                                                   <packing>
                                                     <property name="expand">False</property>
                                                     <property name="fill">True</property>
+                                                    <property name="padding">5</property>
                                                     <property name="position">0</property>
                                                   </packing>
                                                 </child>
@@ -1039,7 +1040,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkFrame">
+                      <object class="GtkFrame" id="fra_output_video">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="label-xalign">0</property>
@@ -1075,6 +1076,7 @@
                                       <object class="GtkSwitch" id="switch_copy_video">
                                         <property name="visible">True</property>
                                         <property name="can-focus">True</property>
+                                        <signal name="state-set" handler="switch_copy_video_state_set_cb" swapped="no"/>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
@@ -1129,10 +1131,12 @@
                                                 <property name="can-focus">True</property>
                                                 <property name="receives-default">False</property>
                                                 <property name="draw-indicator">True</property>
+                                                <signal name="toggled" handler="chk_output_video_scale_toggled_cb" swapped="no"/>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
                                                 <property name="fill">True</property>
+                                                <property name="padding">5</property>
                                                 <property name="position">1</property>
                                               </packing>
                                             </child>
@@ -1156,11 +1160,11 @@
                                                   </packing>
                                                 </child>
                                                 <child>
-                                                  <object class="GtkLabel" id="lbl_output_video_height">
+                                                  <object class="GtkLabel" id="lbl_output_video_x">
                                                     <property name="visible">True</property>
                                                     <property name="sensitive">False</property>
                                                     <property name="can-focus">False</property>
-                                                    <property name="label" translatable="yes">x</property>
+                                                    <property name="label" translatable="yes">X</property>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>

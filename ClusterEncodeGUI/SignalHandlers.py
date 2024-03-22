@@ -128,5 +128,41 @@ class SignalHandlers:
         volume_level_slider.set_sensitive(widget.get_active())
         return
 
+    @staticmethod
+    def switch_copy_video_state_set_cb(widget: Gtk.Switch, *_args) -> None:
+        video_encoder_frame: Gtk.Frame = common.builder.get_object('fra_output_video_encode')
+        video_encoder_combo: Gtk.ComboBox = common.builder.get_object('cmb_output_video_encoder')
+        chk_scale_video: Gtk.CheckButton = common.builder.get_object('chk_output_video_scale')
+        spin_video_width: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_width')
+        seperator_label: Gtk.Label = common.builder.get_object('lbl_output_video_x')
+        spin_video_height: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_height')
+        if not widget.get_state():
+            video_encoder_frame.set_sensitive(False)
+            video_encoder_combo.set_sensitive(False)
+            chk_scale_video.set_sensitive(False)
+            spin_video_width.set_sensitive(False)
+            seperator_label.set_sensitive(False)
+            spin_video_height.set_sensitive(False)
+        else:
+            video_encoder_frame.set_sensitive(True)
+            video_encoder_combo.set_sensitive(True)
+            chk_scale_video.set_sensitive(True)
+            spin_video_width.set_sensitive(chk_scale_video.get_active())
+            seperator_label.set_sensitive(chk_scale_video.get_active())
+            spin_video_height.set_sensitive(chk_scale_video.get_active())
+        return
+
+    @staticmethod
+    def chk_output_video_scale_toggled_cb(widget: Gtk.CheckButton, *_args) -> None:
+        # Get widgets:
+        spin_video_width: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_width')
+        seperator_label: Gtk.Label = common.builder.get_object('lbl_output_video_x')
+        spin_video_height: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_height')
+        spin_video_width.set_sensitive(widget.get_active())
+        seperator_label.set_sensitive(widget.get_active())
+        spin_video_height.set_sensitive(widget.get_active())
+        return
+
+
 if __name__ == '__main__':
     exit(0)
