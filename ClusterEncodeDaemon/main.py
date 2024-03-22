@@ -8,11 +8,11 @@ import json
 import logging
 import os
 import shutil
-from typing import Final, Any, Optional
+from typing import Final, Any
 from multiprocessing.connection import Listener
 
 import common
-from common import out_error, out_info, out_warning, out_debug
+from common import out_error, out_info, out_debug
 from ffmpegCli import ffmpegCli
 
 # Consts:
@@ -149,7 +149,7 @@ def main() -> None:
                 response_obj = build_status_dict()
                 common.__send__(response_obj)
             elif command_obj['command'] == 'split':  # Split the video command:
-                def send_progress(file_path, file_count):
+                def report_progress(file_path, file_count):
                     progress_obj = {
                         'version': '1.0.0',
                         'status': 'splitting',
@@ -166,7 +166,7 @@ def main() -> None:
                     command_obj['inputFile'],
                     command_obj['outputDir'],
                     command_obj['chunkSize'],
-                    send_progress)
+                    report_progress)
                 success, output_files = common.ffmpeg_cli.split_finish()
                 finished_obj = {
                     'version': '1.0.0',
