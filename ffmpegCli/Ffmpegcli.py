@@ -57,16 +57,13 @@ class Ffmpegcli(object):
         audio_encoders: list[tuple[str, str]] = []
         start_looking: bool = False
         for line in all_encoders:
-            # print(line)
             if line.startswith(' -'):
-                print("Starting to look")
                 start_looking = True
             if start_looking:
                 if line.startswith(' A'):
                     encoder: str = line.split()[1]
                     description: str = ' '.join(line.split()[2:])
                     audio_encoders.append((encoder, description))
-                    print(encoder, '"%s"' % description)
         return audio_encoders
 
     def get_video_encoders(self) -> Optional[list[tuple[str, str]]]:
