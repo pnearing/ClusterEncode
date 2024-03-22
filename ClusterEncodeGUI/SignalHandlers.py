@@ -8,7 +8,6 @@ from pymediainfo import MediaInfo
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GObject, Gio
-GObject.threads_init()
 
 
 class SignalHandlers:
@@ -77,6 +76,12 @@ class SignalHandlers:
         return
 
     def fbtn_input_file_file_set_cb(self, widget, *_args):
+        """
+        Input file chooser button file-set callback.
+        :param widget: FileChooserButton: The widget.
+        :param _args: Ignored.
+        :return: None
+        """
         # Get the file path from the widget:
         file_path = widget.get_file().get_path()
         # Load the media info:
@@ -87,8 +92,12 @@ class SignalHandlers:
         # Enable the 'encode' button:
         encode_button = self._builder.get_object('btn_start_encode')
         encode_button.set_sensitive(True)
+
+        # debug:
+        print(_args)
         return
 
-
+    def switch_copy_audio_state_set_cb(self, widget, *_args):
+        return
 if __name__ == '__main__':
     exit(0)

@@ -2,20 +2,19 @@
 """
     File: main.py
 """
+import argparse
 import json
 import os
-from typing import Optional, Final
-from pymediainfo import MediaInfo
+import shutil
+from typing import Final
+
+import gi
 
 import common
 from SignalHandlers import SignalHandlers
 
-import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
-from gi.repository import GLib
-from gi.repository import Gio
-
+from gi.repository import Gtk, Gio, GLib, GObject
 
 # Consts:
 WORKING_DIR_NAME: Final[str] = '.ClusterEncode'
@@ -32,7 +31,7 @@ def create_working_directory():
     try:
         os.mkdir(common.working_dir)
     except OSError as e:
-        print("Failed to create working directory '%s': %s[%d]." % (common.working_dir, e.strerror, e.errno))
+        print("Failed to create working directory: %s[%d]." % (e.strerror, e.errno))
         exit(1)
     return
 
@@ -60,15 +59,28 @@ def create_default_config():
     common.config['hosts'] = {}
     try:
         with open(common.config_path, 'w') as file_handle:
-            file_handle.write(json.dumps(common.config))
+            file_handle.write(json.dumps(common.config, indent=4))
     except OSError as e:
         print("Failed to write config file: %s[%d]." % (e.strerror, e.errno))
         exit(12)
 
 
 if __name__ == '__main__':
-    # Create GUI:
-    builder.add_from_file("ClusterEncode.glade")
+    description = """
+    ClusterEncoderGui:
+    The gui to manage an encode process.
+    
+    Exit Codes: 1 -> failed to create local working directory.
+                10 -> Failed to open config file.
+                11 -> Failed to load config JSON.
+                12 -> Failed to write config file.
+    """
+    parser = argparse.ArgumentParser(description=description,
+                                     epilog="Written by Peter Nearing.")
+
+    parser.add_argument('--configFile',
+                        help="The full path to the config file to use. Default=$HOME/.ClusterEncode/config.json",
+                        type=str)
 
     # Locate the local working directory, create it if required, and change to it:
     common.working_dir = os.path.join(os.environ['HOME'], WORKING_DIR_NAME)
@@ -83,20 +95,42 @@ if __name__ == '__main__':
     else:
         create_default_config()
 
+    ffmpeg_path: str = shutil.which('ffmpeg')
+    if ffmpeg_path is None:
+        print("ffmpeg not installed. Please install with 'sudo apt install ffmpeg'.")
+        exit()
+
+    # Create GUI:
+    builder.add_from_file("ClusterEncode.glade")
+
+
     # Connect GUI signals:
     builder.connect_signals(SignalHandlers(builder))
 
     # Set input/ output / shared directory for the file chooser buttons:
     shared_path = common.config['sharedDir']
-    input_file_object = builder.get_object("fbtn_input_file")
-    shared_dir_object = builder.get_object("fbtn_shared_directory")
-    output_dir_object = builder.get_object("fbtn_output_directory")
+    output_path = common.config['outputDir']
+    input_file_object: Gtk.FileChooserWidget = builder.get_object("fbtn_input_file")
+    shared_dir_object: Gtk.FileChooserWidget = builder.get_object("fbtn_shared_directory")
+    output_dir_object: Gtk.FileChooserWidget = builder.get_object("fbtn_output_directory")
     input_file_object.set_current_folder(shared_path)
     shared_dir_object.set_current_folder(shared_path)
-    output_dir_object.set_current_folder(shared_path)
+    output_dir_object.set_current_folder(output_path)
+
+    # Create a list store for the audio encoders.
+    lst_store_audio_encoders: Gtk.ListStore = Gtk.ListStore.new(types=(str, str))
+    lst_store_audio_encoders.append(('mp3', 'mp3 audio'))
+    combo_audio_encoders: Gtk.ComboBox = builder.get_object('cmb_output_audio_encoder')
+    combo_audio_encoders.set_model(lst_store_audio_encoders)
+
 
     # Get and show the window:
-    window = builder.get_object("app_window")
+    window: Gtk.ApplicationWindow = builder.get_object("app_window")
     window.show_all()
     # Main loop:
-    Gtk.main()
+    try:
+        Gtk.main()
+    except KeyboardInterrupt:
+        pass
+
+    exit(0)
