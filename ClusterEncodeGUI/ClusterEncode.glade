@@ -932,11 +932,11 @@
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
                                                 <property name="tooltip-text" translatable="yes">Select the audio encoder to use.</property>
-                                                <property name="active">0</property>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
                                                 <property name="fill">True</property>
+                                                <property name="padding">5</property>
                                                 <property name="position">0</property>
                                               </packing>
                                             </child>
@@ -967,6 +967,7 @@
                                                     <property name="can-focus">True</property>
                                                     <property name="receives-default">False</property>
                                                     <property name="draw-indicator">True</property>
+                                                    <signal name="toggled" handler="on_chk_volume_boost_toggled" swapped="no"/>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>
