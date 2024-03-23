@@ -197,6 +197,12 @@ if __name__ == '__main__':
     else:
         combo_video_encoders.set_active(0)
 
+    # Set the scale width / height to reasonable values:
+    spin_video_width: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_width')
+    spin_video_height: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_height')
+    spin_video_width.set_value(1920)
+    spin_video_height.set_value(1080)
+
     # Get and show the window:
     window: Gtk.ApplicationWindow = common.builder.get_object("app_window")
     window.show_all()
