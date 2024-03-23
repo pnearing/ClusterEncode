@@ -7,7 +7,7 @@ import sys
 from multiprocessing import AuthenticationError
 from multiprocessing.connection import Connection, Listener
 from typing import Any, Optional
-from ffmpegCli import ffmpegCli
+from ffmpegCli import Ffmpegcli
 
 # common variables:
 DEBUG: bool = False
@@ -32,7 +32,7 @@ config: dict[str, Any] = {
 
 connection: Optional[Connection] = None
 """The current connection."""
-ffmpeg_cli: Optional[ffmpegCli] = None
+ffmpeg_cli: Optional[Ffmpegcli] = None
 """The ffmpeg cli helper."""
 status: str = "Idle"
 """The current status of the daemon."""

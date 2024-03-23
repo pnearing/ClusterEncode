@@ -13,7 +13,7 @@ from multiprocessing.connection import Listener
 
 import common
 from common import out_error, out_info, out_debug
-from ffmpegCli import ffmpegCli
+from ffmpegCli import Ffmpegcli
 
 # Consts:
 __version__: Final[str] = '1.0.0'
@@ -410,7 +410,7 @@ if __name__ == '__main__':
     if ffmpeg_path is None:
         out_error("Unable to find ffmpeg.")
         exit(22)
-    common.ffmpeg_cli = ffmpegCli(ffmpeg_path)
+    common.ffmpeg_cli = Ffmpegcli(ffmpeg_path)
 
     # Fork if requested:
     if args.doFork is True:
