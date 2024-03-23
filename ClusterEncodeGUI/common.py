@@ -2,6 +2,7 @@
 """
     File: common.py
 """
+import ipaddress
 import sys
 import json
 from typing import Any, Final
@@ -35,6 +36,7 @@ builder: Gtk.Builder
 """The common Gtk.Builder object."""
 ffpmeg_cli: Ffmpegcli
 
+
 def save_config() -> None:
     """
     Save the config file. If unable to save, exit's 10 on OSError.
@@ -47,3 +49,46 @@ def save_config() -> None:
         print("Failed to open config file for writing.")
         exit(10)
     return
+
+
+def validate_host_name(name: str) -> bool:
+    """
+    Make sure the given host name is not used.
+    :param name: str: The name to check.
+    :return: bool: True the name is unique, False it is not.
+    """
+    return name not in config['hosts'].keys()
+
+
+def validate_address(address: str) -> bool:
+    """
+    Validate that the given address is a valid IP address.
+    :param address: str: The address to check.
+    :return: bool: True the address is good, False the address is bad.
+    """
+    try:
+        _ = ipaddress.ip_address(address)
+        return True
+    except ValueError:
+        return False
+
+
+def validate_port(port: int) -> bool:
+    """
+    Validate the given port is good.
+    :param port: int: The port to check.
+    :return: bool: True the port is good; False the port is bad.
+    """
+    if port < 1024 or port > 65535:  # Allow only userspace ports.
+        return False
+    return True
+
+
+def validate_secret(secret: str) -> bool:
+    """
+    Validate the shared secret is at least 8 chars long.
+    :param secret: str: The secret to check.
+    :return: bool: True the secret is good; False the secret is bad.
+    """
+    return len(secret) >= 8
+
