@@ -2,6 +2,7 @@
 """
     File: SignalHandlers.py
 """
+import os.path
 
 from pymediainfo import MediaInfo
 import common
@@ -95,8 +96,15 @@ class SignalHandlers:
         encode_button = common.builder.get_object('btn_start_encode')
         encode_button.set_sensitive(True)
 
-        # debug:
-        print(_args)
+        # Set the output file name.
+        file_name: str = os.path.split(file_path)[-1]
+        if file_name.endswith('.mkv'):
+            file_name = file_name[:-4] + 're-encode.mkv'
+        else:
+            idx = file_name.rfind('.')
+            file_name = file_name[:idx] + '.mkv'
+        file_name_entry: Gtk.Entry = common.builder.get_object('ent_output_filename')
+        file_name_entry.set_text(file_name)
         return
 
     @staticmethod
@@ -163,6 +171,71 @@ class SignalHandlers:
         spin_video_height.set_sensitive(widget.get_active())
         return
 
+    @staticmethod
+    def btn_add_host_clicked_cb(widget: Gtk.Button, *_args) -> None:
 
-if __name__ == '__main__':
-    exit(0)
+        # Get the objects we're going to use:
+        add_host_dialog: Gtk.Dialog = common.builder.get_object('add_host_dialog')  # The dialog window.
+        name_entry: Gtk.Entry = common.builder.get_object('ent_add_host_name')  # The name property / key.
+        address_entry: Gtk.Entry = common.builder.get_object('ent_add_host_ip')  # The IP Address.
+        port_spin: Gtk.SpinButton = common.builder.get_object('sbtn_add_host_port')  # The port number.
+        secret_entry: Gtk.Entry = common.builder.get_object('ent_add_host_secret')  # The shared secret for this host.
+        error_dialog: Gtk.Dialog = common.builder.get_object('error_dialog')  # The error dialog for errors.
+        error_label: Gtk.Label = common.builder.get_object('lbl_error_text')  # The error label for the message.
+        # Clear the values in the entries since we're adding new, not editing:
+        name_entry.set_text('')
+        address_entry.set_text('')
+        address_entry.set_text('')
+        port_spin.set_value(65500)
+        secret_entry.set_text('')
+
+        # Run the dialog
+        while True:
+            response: Gtk.ResponseType = add_host_dialog.run()
+
+            if response == Gtk.ResponseType.OK:
+                # Gather info from the entries / spin button:
+                name: str = name_entry.get_text()
+                address: str = address_entry.get_text()
+                port: int = port_spin.get_value_as_int()
+                secret: str = secret_entry.get_text()
+
+                # Validate the data, and show a popup with an error if data invalid:
+                if not common.validate_host_name(name):
+                    error_label.set_label('Invalid name for the host, already in use.')
+                    error_dialog.run()
+                    error_dialog.hide()
+                    continue
+                elif not common.validate_address(address):
+                    error_label.set_label('Address is not a valid IPv4 or IPv6 address.')
+                    error_dialog.run()
+                    error_dialog.hide()
+                    continue
+                elif not common.validate_port(port):
+                    error_label.set_label('Port is an invalid port.')
+                    error_dialog.run()
+                    error_dialog.hide()
+                    continue
+                elif not common.validate_secret(secret):
+                    error_label.set_label('Secret is too short.')
+                    error_dialog.run()
+                    error_dialog.hide()
+                    continue
+
+                # Add the host to the config and save it:
+
+                # TODO: Add host to hosts list box.
+                pass
+
+            elif response == Gtk.ResponseType.CANCEL:
+                add_host_dialog.hide()
+                break
+
+        return
+
+
+
+
+
+
+
