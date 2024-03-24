@@ -111,6 +111,12 @@ class SignalHandlers:
 
     @staticmethod
     def switch_copy_audio_state_set_cb(widget: Gtk.Switch, *_args):
+        """
+        Copy Audio switch, set the sensitivities of the encoding options.
+        :param widget: Gtk.Switch: The switch widget.
+        :param _args: Ignored.
+        :return: None
+        """
         # Get the widgets we want to work with:
         audio_encoder_frame: Gtk.Frame = common.builder.get_object('fra_output_audio_encoder')
         audio_encoder_combo: Gtk.ComboBox = common.builder.get_object('cmb_output_audio_encoder')
@@ -134,12 +140,24 @@ class SignalHandlers:
 
     @staticmethod
     def on_chk_volume_boost_toggled(widget: Gtk.CheckButton, *_args):
+        """
+        Volume boost check box, set the slider sensitivity.
+        :param widget: Gtk.CheckButton: The check button widget.
+        :param _args: Ignored.
+        :return: None
+        """
         volume_level_slider: Gtk.Scale = common.builder.get_object('sbtn_output_audio_boost_value')
         volume_level_slider.set_sensitive(widget.get_active())
         return
 
     @staticmethod
     def switch_copy_video_state_set_cb(widget: Gtk.Switch, *_args) -> None:
+        """
+        Copy video switch, sets the sensitivities of the video encoding widgets.
+        :param widget: Gtk.Switch: The copy video switch widget.
+        :param _args: Ignored.
+        :return: None
+        """
         video_encoder_frame: Gtk.Frame = common.builder.get_object('fra_output_video_encode')
         video_encoder_combo: Gtk.ComboBox = common.builder.get_object('cmb_output_video_encoder')
         chk_scale_video: Gtk.CheckButton = common.builder.get_object('chk_output_video_scale')
@@ -164,6 +182,12 @@ class SignalHandlers:
 
     @staticmethod
     def chk_output_video_scale_toggled_cb(widget: Gtk.CheckButton, *_args) -> None:
+        """
+        Scale video check box, sets the sensitivities of the width / height widgets.
+        :param widget: Gtk.CheckButton: The check box widget.
+        :param _args: Ignored.
+        :return: None.
+        """
         # Get widgets:
         spin_video_width: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_width')
         seperator_label: Gtk.Label = common.builder.get_object('lbl_output_video_x')
@@ -174,16 +198,33 @@ class SignalHandlers:
         return
 
     @staticmethod
-    def btn_add_host_clicked_cb(widget: Gtk.Button, *_args) -> None:
+    def chk_btn_output_cluster_use_local_copy_toggled_cb(widget: Gtk.CheckButton, *_args) -> None:
+        """
+        Copy video chunk check box, sets the verify copy sensitivity.
+        :param widget: Gtk.CheckButton
+        :param _args: Ignored.
+        :return: None
+        """
+        # Get the verify copy widget and set it sensitivity based on this buttons value.
+        verify_check: Gtk.CheckButton = common.builder.get_object('chk_output_cluster_verify_copy')
+        verify_check.set_sensitive(widget.get_active())
+        return
 
+    @staticmethod
+    def btn_add_host_clicked_cb(widget: Gtk.Button, *_args) -> None:
+        """
+        Add host button clicked callback.  Brings up the add host dialog, contains add host logic.
+        :param widget: Gtk.Button: The add host button.
+        :param _args: Ignored.
+        :return: None.
+        """
         # Get the objects we're going to use:
         add_host_dialog: Gtk.Dialog = common.builder.get_object('add_host_dialog')  # The dialog window.
         name_entry: Gtk.Entry = common.builder.get_object('ent_add_host_name')  # The name property / key.
         address_entry: Gtk.Entry = common.builder.get_object('ent_add_host_ip')  # The IP Address.
         port_spin: Gtk.SpinButton = common.builder.get_object('sbtn_add_host_port')  # The port number.
         secret_entry: Gtk.Entry = common.builder.get_object('ent_add_host_secret')  # The shared secret for this host.
-        error_dialog: Gtk.Dialog = common.builder.get_object('error_dialog')  # The error dialog for errors.
-        error_label: Gtk.Label = common.builder.get_object('lbl_error_text')  # The error label for the message.
+
         # Clear the values in the entries since we're adding new, not editing:
         name_entry.set_text('')
         address_entry.set_text('')
@@ -202,26 +243,9 @@ class SignalHandlers:
                 port: int = port_spin.get_value_as_int()
                 secret: str = secret_entry.get_text()
 
-                # Validate the data, and show a popup with an error if data invalid:
-                if not common.validate_host_name(name):
-                    error_label.set_label('Invalid name for the host, already in use.')
-                    error_dialog.run()
-                    error_dialog.hide()
-                    continue
-                elif not common.validate_address(address):
-                    error_label.set_label('Address is not a valid IPv4 or IPv6 address.')
-                    error_dialog.run()
-                    error_dialog.hide()
-                    continue
-                elif not common.validate_port(port):
-                    error_label.set_label('Port is an invalid port.')
-                    error_dialog.run()
-                    error_dialog.hide()
-                    continue
-                elif not common.validate_secret(secret):
-                    error_label.set_label('Secret is too short.')
-                    error_dialog.run()
-                    error_dialog.hide()
+                # Validate the data, shows a popup with an error if data invalid:
+                results = common.validate_host_values(name, address, port, secret)
+                if not results:
                     continue
 
                 # TODO: Check the connection.
@@ -239,11 +263,36 @@ class SignalHandlers:
         return
 
     @staticmethod
-    def chk_btn_output_cluster_use_local_copy_toggled_cb(widget:Gtk.CheckButton, *_args) -> None:
-        # Get the verify copy widget and set it sensitivity based on this buttons value.
-        verify_check: Gtk.CheckButton = common.builder.get_object('chk_output_cluster_verify_copy')
-        verify_check.set_sensitive(widget.get_active())
-        return
+    def btn_test_connection_clicked_cb(widget: Gtk.Button, *_args) -> None:
+        """
+        Test connection button callback.  Run the connection test, and show the results.
+        :param widget: Gtk.Button: The test button.
+        :param _args: Ignored.
+        :return: None
+        """
+        # Get the widgets we're going to use:
+        name_entry: Gtk.Entry = common.builder.get_object('ent_add_host_name')  # The name property / key.
+        address_entry: Gtk.Entry = common.builder.get_object('ent_add_host_ip')  # The IP Address.
+        port_spin: Gtk.SpinButton = common.builder.get_object('sbtn_add_host_port')  # The port number.
+        secret_entry: Gtk.Entry = common.builder.get_object('ent_add_host_secret')  # The shared secret for this host.
+        spin_testing: Gtk.Spinner = common.builder.get_object('spin_test')  # The testing spinner.
+        img_test_success: Gtk.Image = common.builder.get_object('img_test_success')  # The checkmark image.
+        img_test_failed: Gtk.Image = common.builder.get_object('img_test_failed')  # The 'X' image.
 
+        # Start the spinner:
+        spin_testing.start()
 
+        # Collect their values:
+        name: str = name_entry.get_text()
+        address: str = address_entry.get_text()
+        port: int = port_spin.get_value_as_int()
+        secret: str = secret_entry.get_text()
 
+        # Validate host values, shows a popup with error:
+        results = common.validate_host_values(name, address, port, secret)
+        if not results:
+            img_test_failed.show()
+            spin_testing.stop()
+            return
+
+        # Test the connection to the server:
