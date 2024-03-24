@@ -105,6 +105,62 @@
       <column type="gchararray"/>
     </columns>
   </object>
+  <object class="GtkWindow" id="loading_window">
+    <property name="can-focus">False</property>
+    <property name="type">popup</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
+    <property name="destroy-with-parent">True</property>
+    <property name="type-hint">splashscreen</property>
+    <property name="skip-taskbar-hint">True</property>
+    <property name="skip-pager-hint">True</property>
+    <property name="deletable">False</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Loading file:</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="padding">5</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="lbl_loading_filename">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Filename</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="padding">5</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSpinner">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="active">True</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="padding">5</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkAdjustment" id="port_adjustment">
     <property name="lower">1025</property>
     <property name="upper">65535</property>
@@ -1162,11 +1218,6 @@
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
                                                 <property name="tooltip-text" translatable="yes">Select the video encoder to use.</property>
-                                                <property name="active">0</property>
-                                                <items>
-                                                  <item translatable="yes">H.264</item>
-                                                  <item translatable="yes">H.265</item>
-                                                </items>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
@@ -1394,6 +1445,7 @@
                                     <property name="receives-default">False</property>
                                     <property name="active">True</property>
                                     <property name="draw-indicator">True</property>
+                                    <signal name="toggled" handler="chk_btn_output_cluster_use_local_copy_toggled_cb" swapped="no"/>
                                   </object>
                                   <packing>
                                     <property name="expand">False</property>

@@ -78,7 +78,7 @@ class SignalHandlers:
         Gtk.main_quit()
         return
 
-    def fbtn_input_file_file_set_cb(self, widget: Gtk.FileChooserWidget, *_args):
+    def fbtn_input_file_file_set_cb(self, widget: Gtk.FileChooserButton, *_args):
         """
         Input file chooser button file-set callback.
         :param widget: FileChooserButton: The widget.
@@ -87,8 +87,10 @@ class SignalHandlers:
         """
         # Get the file path from the widget:
         file_path = widget.get_file().get_path()
+
         # Load the media info:
         media_info = MediaInfo.parse(file_path)  # TODO: This causes the dialog to hang on large files.
+
         # Set the input audio/video labels:
         self._set_input_audio_properties(media_info)
         self._set_input_video_properties(media_info)
@@ -222,20 +224,26 @@ class SignalHandlers:
                     error_dialog.hide()
                     continue
 
-                # Add the host to the config and save it:
+                # TODO: Check the connection.
 
-                # TODO: Add host to hosts list box.
-                pass
 
-            elif response == Gtk.ResponseType.CANCEL:
+
+                # All the vars are good, hide the dialog.
                 add_host_dialog.hide()
                 break
 
+            elif response == Gtk.ResponseType.CANCEL:
+                add_host_dialog.hide()
+                return
+
         return
 
-
-
-
+    @staticmethod
+    def chk_btn_output_cluster_use_local_copy_toggled_cb(widget:Gtk.CheckButton, *_args) -> None:
+        # Get the verify copy widget and set it sensitivity based on this buttons value.
+        verify_check: Gtk.CheckButton = common.builder.get_object('chk_output_cluster_verify_copy')
+        verify_check.set_sensitive(widget.get_active())
+        return
 
 
 
