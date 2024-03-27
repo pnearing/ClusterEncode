@@ -8,11 +8,14 @@ import json
 import logging
 import os
 import shutil
+import sys
+from datetime import timedelta
 from typing import Final, Any
 from multiprocessing.connection import Listener
-
+from Config import Config, ConfigError
 import common
-from common import out_error, out_info, out_debug
+from common import out_error, out_info, out_debug, out_warning
+sys.path.append('../')
 from ffmpegCli import Ffmpegcli
 
 # Consts:
@@ -25,7 +28,7 @@ CONFIG_FILENAME: Final[str] = "config.json"
 LOG_FILENAME: Final[str] = 'CEDaemon.log'
 """The log file file name."""
 VALID_COMMANDS: Final[tuple[str, ...]] = (
-    'report', 'status', 'split', 'copy_input', 'encode', 'copy_output', 'combine', 'hash', 'shutdown'
+    'report', 'status', 'split', 'copy_input', 'encode', 'copy_output', 'combine', 'hash', 'shutdown', 'close',
 )
 """A list of valid daemon commands."""
 
@@ -82,7 +85,32 @@ def validate_command_params(command_obj: dict[str, Any], params: tuple[tuple[str
             common.__close__()
             return False
         if not isinstance(command_obj[key_name], value_type):
-            common.send_error(21, "parameter '%s' must be '%s' type." % (key_name, value_type))
+            common.send_error(21, "parameter '%s' must be '%s' type." % (key_name, str(value_type)))
+            common.__close__()
+            return False
+    return True
+
+
+def check_file_or_directory_exists(path: str, is_file: bool = True) -> bool:
+    """
+    Check if a file or directory exists on the system, and if not, send an error object and close the connection.
+    :param path: str: The path to check.
+    :param is_file: bool: True check for a file, False, check for a directory.
+    :return: bool: The file / directory exists, False the file / directory doesn't exist and the connection has been
+    closed.
+    """
+    if not os.path.exists(path):
+        common.send_error(30, "File | directory '%s' doesn't exist." % path)
+        common.__close__()
+        return False
+    if is_file:
+        if not os.path.isfile(path):
+            common.send_error(31, "'%s' isn't a file." % path)
+            common.__close__()
+            return False
+    else:
+        if not os.path.isdir(path):
+            common.send_error(32, "'%s' isn't a directory." % path)
             common.__close__()
             return False
     return True
@@ -95,10 +123,11 @@ def build_report_dict() -> dict[str, Any]:
     """
     response_obj: dict[str, Any] = {
         'version': '1.0.0',
+        'status': common.status,
         'daemonVersion': __version__,
         'ffmpegVersion': common.ffmpeg_cli.get_version(),
-        'numChunks': common.config['numChunks'],
-        'isFileHost': common.config['isFileHost'],
+        'numChunks': common.config.num_chunks,
+        'isFileHost': common.config.is_file_host,
     }
     return response_obj
 
@@ -116,25 +145,85 @@ def build_status_dict() -> dict[str, Any]:
     return response_obj
 
 
+def report_split_progress(report_type: str, *args) -> None:
+    response_obj = {
+        'version': '1.0.0',
+    }
+    if report_type == 'new_file':
+        response_obj['status'] = 'splitting new file'
+        response_obj['filePath'] = args[0]  # str
+        response_obj['numFiles'] = args[1]  # int
+    elif report_type == 'report':
+        response_obj['status'] = 'splitting report'
+        response_obj['currentTime'] = args[0]  # timedelta
+        response_obj['currentSpeed'] = args[1]  # str
+        response_obj['segmentComplete'] = args[2]  # float 0.0 -> 100.0
+        response_obj['totalComplete'] = args[3]  # Optional[float] 0.0 -> 100.0
+    common.__send__(response_obj)
+    return
+
+
+def do_split(input_path: str, output_path: str, chunk_size: int, length: timedelta) -> bool:
+    """
+    Call ffmpeg split thread
+    :param input_path: str: The input file to split.
+    :param output_path: str: The output dir for the resulting files.
+    :param chunk_size: int: The number of seconds to split by.
+    :param length: timedelta: The total length of the input file as a timedelta.
+    :return: bool: True the split completed successfully. False it did not.
+    """
+    # Start the split:
+    success: bool = common.ffmpeg_cli.split(
+        input_path=input_path,
+        output_path=output_path,
+        chunk_size=chunk_size,
+        callback=report_split_progress,
+        report_delay=0.5,
+        total_time=length
+    )
+
+    if not success:
+        common.send_error(40, "Failed to start split thread.")
+        common.__close__()
+        return False
+
+    success, output_files = common.ffmpeg_cli.split_finish()
+
+    if not success:
+        common.send_error(41, "Split reports as failed.")
+        common.__close__()
+        return False
+
+    # Send split finished.
+    finished_obj = {
+        'version': '1.0.0',
+        'status': 'split finished',
+        'success': success,
+        'outputFiles': output_files,
+    }
+    common.__send__(finished_obj)
+    return True
+
+
 def main() -> None:
     """
     Main loop.
     :return: None
     """
     # Create listener
-    passwd = common.config['sharedSecret'].encode()
-    listener = Listener((common.config['host'], common.config['port']), authkey=passwd)
-    running = True
+    passwd: bytes = common.config.shared_secret.encode()
+    listener: Listener = Listener((common.config.host, common.config.port), authkey=passwd)
+    running: bool = True
     while running:
         # Accept a connection:
         common.__accept__(listener)
 
         while True:  # Command response loop.
-            # Receive the command and check that it's a dict, if not, close the connection and wait for another:
+            # Receive the command:
             command_obj: dict[str, Any] = common.__recv__()
 
             # Validate command
-            if not validate_command_obj(command_obj):
+            if not validate_command_obj(command_obj):  # Sends an error and closes the connection.
                 break  # The connection was closed.
 
             # Act on command:
@@ -143,38 +232,31 @@ def main() -> None:
                 running = False
                 break
             elif command_obj['command'] == 'report':  # Report settings command:
+                common.status = 'reporting'
                 response_obj = build_report_dict()
                 common.__send__(response_obj)
+                common.status = 'idle'
             elif command_obj['command'] == 'status':  # Current status command:
                 response_obj = build_status_dict()
                 common.__send__(response_obj)
             elif command_obj['command'] == 'split':  # Split the video command:
-                def report_progress(file_path, file_count):
-                    progress_obj = {
-                        'version': '1.0.0',
-                        'status': 'splitting',
-                        'filePath': file_path,
-                        'fileCount': file_count,
-                    }
-                    common.__send__(progress_obj)
-                    return
-                params = (('inputFile', str), ('outputDir', str), ('chunkSize', int))
-                if not validate_command_params(command_obj, params):
+                # Make sure params exist, and are the right type:
+                params = (('inputFile', str), ('outputDir', str), ('chunkSize', int), ('length', timedelta))
+                if not validate_command_params(command_obj, params):  # Sends an error and closes the connection.
                     break  # The connection was closed.
-                suppress_error: bool = not common.DEBUG
-                common.ffmpeg_cli.split(
-                    command_obj['inputFile'],
-                    command_obj['outputDir'],
-                    command_obj['chunkSize'],
-                    report_progress)
-                success, output_files = common.ffmpeg_cli.split_finish()
-                finished_obj = {
-                    'version': '1.0.0',
-                    'status': 'split finished',
-                    'success': success,
-                    'outputFiles': output_files,
-                }
-
+                # Parse the input file and output directory for shared / local directory:
+                input_file_path = common.parse_path(command_obj['inputFile'])
+                output_dir_path = common.parse_path(command_obj['outputDir'])
+                # Verify the input file exists:
+                if not check_file_or_directory_exists(input_file_path, True):  # Sends error and closes connection
+                    break  # Connection has been closed.
+                # Verify the output directory exists:
+                if not check_file_or_directory_exists(output_dir_path, False):  # Sens error and closes connection
+                    break  # Connection has been closed.
+                # Do the split:
+                common.status = "splitting"
+                do_split(input_file_path, output_dir_path, command_obj['chunkSize'], command_obj['length'])
+                common.status = "idle"
             elif command_obj['command'] == 'copy_input':  # Copy input chunk to local working directory command:
                 pass
             elif command_obj['command'] == 'encode':  # Encode chunk command:
@@ -185,6 +267,9 @@ def main() -> None:
                 pass
             elif command_obj['command'] == 'hash':  # Preform a hash on a video chunk:
                 pass
+            elif command_obj['command'] == 'close':  # Close the connection.
+                common.__close__()
+                break
 
     return
 
@@ -200,23 +285,21 @@ if __name__ == '__main__':
         3 = Supplied config file path doesn't exist.
         4 = Supplied config file isn't a file.
         5 = Failed to create default config file.
-        6 = Failed to read the config file.
-        7 = Failed to decode JSON from config file. (Invalid config JSON.)
-        8 = Shared working directory must be a string. (Invalid config type.)
-        9 = Shared working directory doesn't exist. (Invalid config option.)
-        10 = Local working directory must be a string. (Invalid config type.)
-        11 = Local working directory doesn't exist. (Invalid cconfig option.)
-        12 = IP address must be a string. (Invalid config type.)
-        13 = IP address to listen on isn't a valid IP address. (Invalid config option.)
-        14 = Port to listen on must be an integer. (Invalid config type.)
-        15 = Port to listen on is out of range. (Invalid config option.)
-        16 = Shared secret must be a string. (Invalid config type.)
-        17 = Shared secret is too short. (Invalid config option.)
-        18 = Number of chunks must be an integer. (Invalid config type.)
-        19 = Number of chunks is less than 0. (Invalid config option.)
-        20 = Is file host must be a boolean. (Invalid config type.)
-        21 = Failed to save config file.
-        22 = Unable to find ffmpeg
+        6 = Failed to load the config file.
+        7 = Shared working directory must be a string or doesn't exist. (Invalid config.)
+        8 = Local working directory must be a string or doesn't exist. (Invalid config.)
+        9 = IP address must be a string, or isn't a valid ip address. (Invalid config.)
+        10 = Port to listen on must be an integer, or is out of range. (Invalid config.)
+        11 = Shared secret must be a string, and at least 8 char long. (Invalid config.)
+        12 = Is file host must be a boolean. (Invalid config.)        
+        13 = Number of chunks must be an integer and either min 0 if file host, or min 1 if not. (Invalid config type.)
+        14 = Failed to save config file.
+        15 = Unable to find ffmpeg.
+        16 = Failed to create local input working directory.
+        17 = Failed to create local output working directory.
+        18 = Failed to create shared input working directory.
+        19 = Failed to create shared output working directory.
+        
         23 = Error while trying to fork process.
         30 = Error while sending data.
         31 = Error while receiving data.
@@ -262,13 +345,13 @@ if __name__ == '__main__':
                         help="Save the options to the config file and exit.",
                         action='store_true',
                         default=False)
-    args = parser.parse_args()
+    _args = parser.parse_args()
 
     # Set debug:
-    common.DEBUG = args.debug
+    common.DEBUG = _args.debug
 
     # Create and change to working directory:
-    out_info("Changing to working directory.")
+    out_info("Changing to '.ClusterEncodeDaemon' directory.")
     working_dir_path = os.path.join(os.environ['HOME'], WORKING_DIR_NAME)
     if not os.path.exists(working_dir_path):
         out_debug("Working directory doesn't exist, creating.")
@@ -296,15 +379,15 @@ if __name__ == '__main__':
     # Set the default config file path, and select the config file path to use:
     out_info("Selecting config file.")
     default_config_file_path = os.path.join(working_dir_path, CONFIG_FILENAME)
-    if args.configFile is not None:
+    if _args.configFile is not None:
         out_info("User provided config file.")
-        if not os.path.exists(args.configFile):
-            out_error("Config file: '%s' doesn't exist." % args.configFile)
+        if not os.path.exists(_args.configFile):
+            out_error("Config file: '%s' doesn't exist." % _args.configFile)
             exit(3)
-        if not os.path.isfile(args.configFile):
-            out_error("Config file: '%s' doesn't report as a file." % args.configFile)
+        if not os.path.isfile(_args.configFile):
+            out_error("Config file: '%s' doesn't report as a file." % _args.configFile)
             exit(4)
-        config_file_path = args.configFile
+        config_file_path = _args.configFile
     else:
         out_info("Using default config file.")
         config_file_path = default_config_file_path
@@ -312,108 +395,144 @@ if __name__ == '__main__':
     # Create the default config if it doesn't already exist:
     if config_file_path == default_config_file_path and not os.path.exists(config_file_path):
         out_debug("Default config doesn't exist, creating.")
+        # Create the config object and set some default options:
+        common.config = Config(config_file_path, do_load=False)
+        common.config.local_working_dir = os.environ['HOME']
+        common.config.shared_working_dir = os.environ['HOME']
+        common.config.host = '192.168.1.123'
+        common.config.port = 65500
+        common.config.is_file_host = False
+        common.config.num_chunks = 1
         try:
-            with open(config_file_path, 'w') as file_handle:
-                file_handle.write(json.dumps(common.config, indent=4))
-        except OSError as e:
-            out_error("Failed to create default config file: '%s', %s[%d]." % (config_file_path, e.strerror, e.errno))
+            common.config.save()
+        except ConfigError as e:
+            out_error("Failed to save default config: %s" % e.message)
             exit(5)
 
     # Load the config:
     out_info("Loading config.")
     try:
-        with open(config_file_path, 'r') as file_handle:
-            common.config = json.loads(file_handle.read())
-    except OSError as e:
-        out_error("Failed to load config file '%s': %s[%d]" % (config_file_path, e.strerror, e.errno))
+        common.config = Config(config_file_path)
+    except ConfigError as e:
+        out_error("Failed to load config: %s" % e.message)
         exit(6)
-    except json.JSONDecodeError as e:
-        out_error("Failed to decode JSON from config file '%s': %s." % (config_file_path, e.msg))
-        exit(7)
 
     # Override configs with command line options:
-    if args.sharedWorkingDir is not None:  # Shared working Directory:
-        common.config['sharedWorkingDir'] = args.sharedWorkingDirectory
-    if not isinstance(common.config['sharedWorkingDir'], str):
-        out_error("Shared working directory must be a string.")
-        exit(8)
-    if not os.path.exists(common.config['sharedWorkingDir']):
-        out_error("Provided shared working directory doesn't exist.")
-        exit(9)
+    if _args.sharedWorkingDir is not None:  # Shared working Directory:
+        try:
+            common.config.shared_working_dir = _args.sharedWorkingDirectory
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(7)
 
-    if args.localWorkingDir is not None:  # Local working directory:
-        common.config['localWorkingDir'] = args.localWorkingDir
-    if not isinstance(common.config['localWorkingDir'], str):
-        out_error("Provided local working directory must be a string.")
-        exit(10)
-    if not os.path.exists(common.config['localWorkingDir']):
-        out_error("Provided local working directory doesn't exist.")
-        exit(11)
+    if _args.localWorkingDir is not None:  # Local working directory:
+        try:
+            common.config.local_working_dir = _args.localWorkingDir
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(8)
 
-    if args.hostIP is not None:  # Listen IP:
-        common.config['host'] = args.hostIP
-    if not isinstance(common.config['host'], str):
-        out_error("Provided host IP must be a string.")
-        exit(12)
-    try:
-        _ = ipaddress.ip_address(common.config['host'])
-    except ValueError as e:
-        out_error("Provided host IP isn't an IP address.")
-        exit(13)
+    if _args.hostIP is not None:  # Listen IP:
+        try:
+            common.config.host = _args.hostIP
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(9)
 
-    if args.port is not None:  # Listen port:
-        common.config['port'] = args.port
-    if not isinstance(common.config['port'], int):
-        out_error("Provided port must be an integer.")
-        exit(14)
-    if common.config['port'] <= 0 or common.config['port'] > 65535:
-        out_error("Invalid port provided.")
-        exit(15)
+    if _args.port is not None:  # Listen port:
+        try:
+            common.config.port = _args.port
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(10)
 
-    if args.sharedSecret is not None:  # Connection shared secret.
-        common.config['sharedSecret'] = args.sharedSecret
-    if not isinstance(common.config['sharedSecret'], str):
-        out_error("Provided shared secret is not a string.")
-        exit(16)
-    if len(common.config['sharedSecret']) < 8:
-        out_error("Shared secret too short. (< 8 char.)")
-        exit(17)
+    if _args.sharedSecret is not None:  # Connection shared secret.
+        try:
+            common.config.shared_secret = _args.sharedSecret
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(11)
 
-    if args.numChunks is not None:  # Number of chunks to process:
-        common.config['numChunks'] = args.numChunks
-    if not isinstance(common.config['numChunks'], int):
-        out_error("Provided numChunks must be an integer.")
-        exit(18)
-    if common.config['numChunks'] < 0:
-        out_error("Number of chunks must be greater than or equal to 0.")
-        exit(19)
+    if _args.isFileHost is not None:  # Is file host, NOTE: This must be set before num chunks.:
+        try:
+            common.config.is_file_host = _args.isFileHost
+        except(TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(12)
 
-    if args.isFileHost is not None:  # Is file host:
-        common.config['isFileHost'] = args.isFileHost
-    if not isinstance(common.config['isFileHost'], bool):
-        out_error("Config 'isFileHost' must be a boolean.")
-        exit(20)
+    if _args.numChunks is not None:  # Number of chunks to process:
+        try:
+            common.config.num_chunks = _args.numChunks
+        except (TypeError, ValueError) as e:
+            out_error(e.args[0])
+            exit(13)
 
     # If --saveConfig is selected, save config and exit:
-    if args.saveConfig is True:
+    if _args.saveConfig is True:
         out_info("Saving config, and exiting.")
         try:
-            with open(config_file_path, 'w') as file_handle:
-                file_handle.write(json.dumps(common.config, indent=4))
-            exit(0)
-        except OSError as e:
-            out_error("Failed to write config: %s[%d]." % (e.strerror, e.errno))
-            exit(21)
+            common.config.save()
+        except ConfigError as e:
+            out_error("Failed to write config: %s" % e.message)
+            exit(14)
+        # exit(0)
 
     # Find ffmpeg, and setup cli object:
+    out_info("Locating ffmpeg.")
     ffmpeg_path = shutil.which('ffmpeg')
     if ffmpeg_path is None:
         out_error("Unable to find ffmpeg.")
-        exit(22)
+        exit(15)
     common.ffmpeg_cli = Ffmpegcli(ffmpeg_path)
 
+    # Setup local working directory:
+    out_info("Setting up local working directory...")
+    local_input_path: str = os.path.join(common.config.local_working_dir, 'Input')
+    local_output_path: str = os.path.join(common.config.local_working_dir, 'Output')
+
+    # Check for and create local working INPUT path:
+    if not os.path.exists(local_input_path):
+        out_warning("Local working input directory doesn't exist. Creating.")
+        try:
+            os.mkdir(local_input_path)
+            out_info("Local input directory created.")
+        except OSError as e:
+            out_error("Failed to create local working input directory: %s[%d]" % (e.strerror, e.errno))
+            exit(16)
+
+    # Check for and create local OUTPUT directory:
+    if not os.path.exists(local_output_path):
+        out_warning("Local working output directory doesn't exist. Creating.")
+        try:
+            os.mkdir(local_output_path)
+            out_info("Local output directory created.")
+        except OSError as e:
+            out_error("Failed to create local working output directory: %s[%d]." % (e.strerror, e.errno))
+            exit(17)
+
+    # If file host, setup shared directory:
+    if common.config.is_file_host:
+        out_info("Setting up shared directory.")
+        shared_input_path: str = os.path.join(common.config.shared_working_dir, 'Input')
+        shared_output_path: str = os.path.join(common.config.shared_working_dir, 'Output')
+        # Locate or create shared input dir:
+        if not os.path.exists(shared_input_path):
+            try:
+                os.mkdir(shared_input_path)
+                out_info("Shared input directory created.")
+            except OSError as e:
+                out_error("Failed to create shared input directory:  %s[%d]." % (e.strerror, e.errno))
+                exit(18)
+        if not os.path.exists(shared_output_path):
+            try:
+                os.mkdir(shared_output_path)
+                out_info("Shared output directory created.")
+            except OSError as e:
+                out_error("Failed to create shared output directory: %s[%d]" % (e.strerror, e.errno))
+                exit(19)
+
     # Fork if requested:
-    if args.doFork is True:
+    if _args.doFork is True:
         try:
             pid = os.fork()
             if pid == 0:  # Child process:

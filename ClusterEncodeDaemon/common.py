@@ -3,12 +3,14 @@
     File: common.py
 """
 import logging
+import os
 import sys
 from multiprocessing import AuthenticationError
 from multiprocessing.connection import Connection, Listener
 from typing import Any, Optional
+from Config import Config, ConfigError
+sys.path.append('../')
 from ffmpegCli import Ffmpegcli
-
 # common variables:
 DEBUG: bool = False
 """Should the daemon produce debug output."""
@@ -16,18 +18,7 @@ LOGGER: Optional[logging.Logger] = None
 """The logger to use."""
 IS_DAEMON: bool = False
 """True if this process has forked or not."""
-config: dict[str, Any] = {
-    # Directory settings:
-    'sharedWorkingDir': '/mnt/convert/',
-    'localWorkingDir': '/home/user/convert/',
-    # Connection settings:
-    'host': '192.168.1.123',
-    'port': 65500,
-    'sharedSecret': 'hmkJ}]H%s9)jGQ(tB&AyF^',
-    # Daemon configs:
-    'numChunks': 2,
-    'isFileHost': False,
-}
+config: Optional[Config] = None
 """The daemon config."""
 
 connection: Optional[Connection] = None
@@ -96,6 +87,8 @@ def out_debug(message: str) -> None:
     return
 
 
+#######################################
+# Connection functions:
 def __accept__(listener: Listener) -> Connection:
     """
     Wait for, and return a valid connection.
@@ -116,35 +109,34 @@ def __accept__(listener: Listener) -> Connection:
 def __close__() -> None:
     """
     Close the connection if it's open.
-    :return: None
+    :return: bool: True the connection was closed, False it was not.
     """
     global connection
     if connection is not None:
         connection.close()
         connection = None
-    return
+        return True
+    return False
 
 
-def __send__(object_to_send: Any) -> None:
+def __send__(object_to_send: Any) -> bool:
+    """
+    Send data over the comms channel.
+    :param object_to_send: Any: The data to send.
+    :return: bool: True the data was sent, False is was not.
+    """
     global connection
     if connection is not None:
-        try:
-            connection.send(object_to_send)
-        except ValueError as e:
-            out_error("Attempted to send an invalid value.")
-            exit(30)
-    return
+        connection.send(object_to_send)
+        return True
+    return False
 
 
 def __recv__() -> Any:
     global connection
     if connection is not None:
-        try:
-            recv_obj = connection.recv()
-            return recv_obj
-        except EOFError:
-            out_error("EOF while trying to RECV.")
-            exit(31)
+        recv_obj = connection.recv()
+        return recv_obj
     return None
 
 
@@ -164,6 +156,26 @@ def send_error(error_no: int, error_msg: str) -> None:
     }
     __send__(error_obj)
     return
+
+
+#############################################
+# Protocol functions:
+def parse_path(path: str) -> str:
+    """
+    Replace %shared% and %local% with their respective directories.
+    :param path: The path to parse.
+    :return: str: The path with the values replaced.
+    """
+    return_path: str = path
+    if path.startswith('%shared%/'):
+        temp_path: str = path[9:]
+        return_path = os.path.join(config.shared_working_dir, temp_path)
+    elif path.startswith('%local%/'):
+        temp_path: str = path[8:]
+        return_path = os.path.join(config.local_working_dir, temp_path)
+    return return_path
+
+
 
 
 if __name__ == '__main__':
