@@ -2,6 +2,7 @@
 """
     File: ffmpegCli.py
 """
+import argparse
 import os.path
 import sys
 import shutil
@@ -147,8 +148,14 @@ class Ffmpegcli(object):
 
 
 if __name__ == '__main__':
-    _input = "/mnt/convert/Input/serenity.mkv"
-    _output = "/mnt/convert/Working/Input/"
+    parser = argparse.ArgumentParser('Testing ffmpeg.')
+    parser.add_argument('--input', type=str, required=True)
+    parser.add_argument('--output', type=str, required=True)
+
+    args = parser.parse_args()
+
+    _input = args.input
+    _output = args.output
     _ffmpeg_path = shutil.which('ffmpeg')
     if _ffmpeg_path is None:
         print("ffmpeg not found.")
