@@ -3,8 +3,10 @@
     File: ffmpegCli.py
 """
 import os.path
+import sys
 import shutil
 import subprocess
+from datetime import timedelta
 from typing import Optional
 
 try:
@@ -89,20 +91,43 @@ class Ffmpegcli(object):
                     video_encoders.append((encoder, description))
         return video_encoders
 
-
-    def split(self, input_path: str, output_path: str, chunk_size: int, callback: callable) -> bool:
+    def split(self,
+              input_path: str,
+              output_path: str,
+              chunk_size: int,
+              callback: callable,
+              report_delay: float = 0.5,
+              total_time: Optional[timedelta] = None
+              ) -> bool:
         """
         Start the split thread running.
         :param input_path: str: The full path to the video to split.
         :param output_path: str: The full path to the output directory.
         :param chunk_size: int: The number of seconds per file.
-        :param callback: Callback: The callback to run every time a new file is created.
+        :param callback: Callback: The callback to run every time a new file is created, or a report is generated. The
+        callback signature should be: (report_type: str, *args). If 'report_type' == 'report', then *args is:
+        [current_time: timedelta, current_speed: str, percent_segment_complete: float,
+        percent_complete: Optional[float]]; Otherwise, if 'report_type' == 'new_file', then *args is:
+        [new_file_path: str, current_num_files: int].
+        :param report_delay: float = 0.5: The amount of time in seconds to wait between reporting.
+        :param total_time: Optional[timedelta] = None: The length of the input video.
         :return: bool: True the thread started, False, the thread didn't start.
         """
-        if self.current_threads is not None:
-            return False
-        self.current_threads = SplitThread(self._ffmpeg_path, input_path, output_path, chunk_size, callback)
-        self.current_threads.start()
+        for thread in self.current_threads:
+            if isinstance(thread, SplitThread):
+                print("Split thread already running.")
+                return False
+        split_thread = SplitThread(
+            ffmpeg_path=self._ffmpeg_path,
+            input_path=input_path,
+            output_path=output_path,
+            chunk_size=chunk_size,
+            callback=callback,
+            report_delay=report_delay,
+            total_time=total_time,
+        )
+        self.current_threads.append(split_thread)
+        split_thread.start()
         return True
 
     def split_finish(self) -> tuple[bool, tuple[str, ...]]:
@@ -112,18 +137,18 @@ class Ffmpegcli(object):
         split success, and False if the split wasn't started; The second element of the tuple is a tuple of strings,
         each element being the full path to a created file, or an empty tuple if the split wasn't started.
         """
-        if not isinstance(self.current_threads, SplitThread):
-            return False, ()
-        self.current_threads.join()
-        output_file_list = self.current_threads.output_files
-        self.current_threads = None
-        return True, output_file_list
-
+        for thread in self.current_threads:
+            if isinstance(thread, SplitThread):
+                thread.join()
+                self.current_threads.remove(thread)
+                output_file_list = thread.output_files
+                return True, output_file_list
+        return False, ()
 
 
 if __name__ == '__main__':
-    _input = "/home/orangepi/convert/Input/serenity.mkv"
-    _output = "/home/orangepi/convert/Working/Input/"
+    _input = "/mnt/convert/Input/serenity.mkv"
+    _output = "/mnt/convert/Working/Input/"
     _ffmpeg_path = shutil.which('ffmpeg')
     if _ffmpeg_path is None:
         print("ffmpeg not found.")
@@ -133,16 +158,20 @@ if __name__ == '__main__':
     print(_ffmpeg_cli.get_version())
 
     # Test split:
-    # def _callback(file_path: str, file_count: int) -> None:
-    #     print(file_path, file_count)
-    #     return
-    # print("Starting split.")
-    # _ffmpeg_cli.split(_input, _output, 300, _callback)
-    #
-    # print("Calling split_finish")
-    # _ffmpeg_cli.split_finish()
-    # print("Split Finished.")
+    def _callback(report_type: str, *args) -> None:
+        print(report_type, args)
+        return
 
-    _ffmpeg_cli.get_audio_encoders()
+    print("Starting split.")
+    results = _ffmpeg_cli.split(_input, _output, 300, _callback)
+    if not results:
+        print("Failed to start split.")
+    else:
+        print("Split started.")
+    print("Calling split_finish")
+    _ffmpeg_cli.split_finish()
+    print("Split Finished.")
+
+    # _ffmpeg_cli.get_audio_encoders()
 
     exit(0)
