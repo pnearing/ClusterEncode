@@ -156,46 +156,25 @@ if __name__ == '__main__':
     output_dir_object.set_current_folder(common.config['outputDir'])
 
     # Create a list store for the audio encoders.
-    lst_store_audio_encoders: Gtk.ListStore = Gtk.ListStore.new(types=(str, str))
-    audio_encoders: Optional[list[tuple[str, str]]] = common.ffpmeg_cli.get_audio_encoders()
-    if audio_encoders is None:
-        print("Failed to get list of audio encoders from ffmpeg.")
-        exit(12)
-    mp3_idx: Optional[int] = None
-    for i, data in enumerate(audio_encoders):
-        encoder, description = data
-        if encoder == 'libmp3lame':
-            mp3_idx = i
-        lst_store_audio_encoders.append((encoder, description))
+    lst_store_audio_encoders: Gtk.ListStore = Gtk.ListStore.new(types=(str,))
+    audio_encoders: list[str] = ['libmp3lame', 'AAC', 'flac']
+    for encoder in audio_encoders:
+        lst_store_audio_encoders.append((encoder,))
 
     # Set the audio encoders combo box model:
     combo_audio_encoders: Gtk.ComboBox = common.builder.get_object('cmb_output_audio_encoder')
     combo_audio_encoders.set_model(lst_store_audio_encoders)
-    if mp3_idx is not None:
-        combo_audio_encoders.set_active(mp3_idx)
-    else:
-        combo_audio_encoders.set_active(0)
-
+    combo_audio_encoders.set_active(0)
+    #
     # Create a list store for the video encoders:
-    lst_store_video_encoders: Gtk.ListStore = Gtk.ListStore.new(types=(str, str))
-    video_encoders: Optional[list[tuple[str, str]]] = common.ffpmeg_cli.get_video_encoders()
-    if video_encoders is None:
-        print("Failed to get a list of video encoders from ffmpeg.")
-        exit(13)
-    x265_idx: Optional[int] = None
-    for i, data in enumerate(video_encoders):
-        encoder, description = data
-        if encoder == 'libx265':
-            x265_idx = i
-        lst_store_video_encoders.append(row=(encoder, description))
-
+    lst_store_video_encoders: Gtk.ListStore = Gtk.ListStore.new(types=(str,))
+    video_encoders: list[str] = ['libx264', 'libx265']
+    for encoder in video_encoders:
+        lst_store_video_encoders.append((encoder,))
     # Set the video encoders combo box model:
     combo_video_encoders: Gtk.ComboBox = common.builder.get_object('cmb_output_video_encoder')
     combo_video_encoders.set_model(lst_store_video_encoders)
-    if x265_idx is not None:
-        combo_video_encoders.set_active(x265_idx)
-    else:
-        combo_video_encoders.set_active(0)
+    combo_video_encoders.set_active(1)
 
     # Set the scale width / height to reasonable values:
     spin_video_width: Gtk.SpinButton = common.builder.get_object('sbtn_output_video_width')

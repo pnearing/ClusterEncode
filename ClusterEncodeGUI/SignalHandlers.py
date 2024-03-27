@@ -3,71 +3,21 @@
     File: SignalHandlers.py
 """
 import os.path
+from typing import Optional
 
 from pymediainfo import MediaInfo
 import common
 import gi
-gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GObject, Gio
+
+from LoadMediaInfoThread import LoadMediaInfoThread
+
+media_thread: Optional[LoadMediaInfoThread] = None
 
 
 class SignalHandlers:
     def __init__(self) -> None:
         self.__version__ = common.__version__
-        return
-
-    @staticmethod
-    def _set_input_audio_properties(media_info: MediaInfo) -> None:
-        """
-        Set the input audio info labels.
-        :param media_info: MediaInfo: The media info object for the input file.
-        :return: None
-        """
-        # Get and set the number of audio tracks:
-        num_audio_tracks = media_info.general_tracks[0].count_of_audio_streams
-        lbl_audio_tracks = common.builder.get_object('lbl_input_audio_num_tracks')
-        lbl_audio_tracks.set_label(str(num_audio_tracks))
-        # Get and set the number of channels:
-        num_channels = media_info.audio_tracks[0].channel_s
-        lbl_num_channels = common.builder.get_object('lbl_input_audio_channels')
-        lbl_num_channels.set_label(str(num_channels))
-        # Get and set the bit rate:
-        bit_rate = media_info.audio_tracks[0].bit_rate
-        lbl_bit_rate = common.builder.get_object('lbl_input_audio_bit_rate')
-        lbl_bit_rate.set_label(str(bit_rate))
-        # Get and set the codec:
-        codec = media_info.audio_tracks[0].commercial_name
-        lbl_codec = common.builder.get_object('lbl_input_audio_codec')
-        lbl_codec.set_label(codec)
-        # Get and set the duration:
-        duration = media_info.audio_tracks[0].other_duration[0]
-        lbl_duration = common.builder.get_object('lbl_input_audio_duration')
-        lbl_duration.set_label(duration)
-        return
-
-    @staticmethod
-    def _set_input_video_properties(media_info: MediaInfo) -> None:
-        """
-        Set the video info properties.
-        :param media_info: MediaInfo: The media info object for the input video.
-        :return: None
-        """
-        # Get and set the codec:
-        codec = media_info.video_tracks[0].commercial_name
-        lbl_codec = common.builder.get_object('lbl_input_video_codec')
-        lbl_codec.set_label(codec)
-        # Get and set width:
-        width = media_info.video_tracks[0].width
-        lbl_width = common.builder.get_object('lbl_input_video_width')
-        lbl_width.set_label(str(width))
-        # Get and set the height:
-        height = media_info.video_tracks[0].height
-        lbl_height = common.builder.get_object('lbl_input_video_height')
-        lbl_height.set_label(str(height))
-        # Get and set the duration:
-        duration = media_info.video_tracks[0].other_duration[0]
-        lbl_duration = common.builder.get_object('lbl_input_video_duration')
-        lbl_duration.set_label(duration)
         return
 
     ##############################
@@ -78,35 +28,25 @@ class SignalHandlers:
         Gtk.main_quit()
         return
 
-    def fbtn_input_file_file_set_cb(self, widget: Gtk.FileChooserButton, *_args):
+    @staticmethod
+    def fbtn_input_file_file_set_cb(widget: Gtk.FileChooserButton, *_args) -> None:
         """
         Input file chooser button file-set callback.
         :param widget: FileChooserButton: The widget.
         :param _args: Ignored.
         :return: None
         """
+        global media_thread
+        # Disable the input file chooser button.
+        widget.set_sensitive(False)
+        # Start the spinner spinning:
+        spinner: Gtk.Spinner = common.builder.get_object('input_file_loading_spinner')
+        spinner.start()
+
         # Get the file path from the widget:
         file_path = widget.get_file().get_path()
-
-        # Load the media info:
-        media_info = MediaInfo.parse(file_path)  # TODO: This causes the dialog to hang on large files.
-
-        # Set the input audio/video labels:
-        self._set_input_audio_properties(media_info)
-        self._set_input_video_properties(media_info)
-        # Enable the 'encode' button:
-        encode_button = common.builder.get_object('btn_start_encode')
-        encode_button.set_sensitive(True)
-
-        # Set the output file name.
-        file_name: str = os.path.split(file_path)[-1]
-        if file_name.endswith('.mkv'):
-            file_name = file_name[:-4] + 're-encode.mkv'
-        else:
-            idx = file_name.rfind('.')
-            file_name = file_name[:idx] + '.mkv'
-        file_name_entry: Gtk.Entry = common.builder.get_object('ent_output_filename')
-        file_name_entry.set_text(file_name)
+        media_thread = LoadMediaInfoThread(file_path)
+        media_thread.start()
         return
 
     @staticmethod
