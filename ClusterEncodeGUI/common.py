@@ -10,6 +10,7 @@ from gi.repository import Gtk
 from multiprocessing.connection import Client, Connection
 from multiprocessing import AuthenticationError
 
+
 sys.path.append('../')
 from ffmpegCli.Ffmpegcli import Ffmpegcli
 
@@ -35,9 +36,9 @@ config: dict[str, Any] = {
     }
 }
 """The custer encode GUI config dict."""
-builder: Gtk.Builder
+builder: Optional[Gtk.Builder] = None
 """The common Gtk.Builder object."""
-ffpmeg_cli: Ffmpegcli
+ffpmeg_cli: Optional[Ffmpegcli] = None
 """The ffmpeg cli object."""
 open_connections: list[tuple[str, Connection]] = []
 """A list of open connections and their names."""
@@ -152,6 +153,7 @@ def get_connection_by_name(search_name: str) -> Optional[Connection]:
             return connection
     return None
 
+
 def get_name_by_connection(search_connection: Connection) -> Optional[str]:
     """
     Get the name of a given connection if it's in the list.
@@ -196,6 +198,25 @@ def remove_connection_by_name(search_name: str) -> bool:
     open_connections = new_open_connections
     return connection_found
 
+
+def remove_connection_by_connection(search_connection: Connection) -> bool:
+    """
+    Remove a connection from the open connections:
+    :param search_connection: Connection: The connection to remove.
+    :return: bool: True the connection was removed, False it was not.
+    """
+    global open_connections
+    new_open_connections: list[tuple[str, Connection]] = []
+    connection_found: bool = False
+    for host_name, connection in open_connections:
+        if connection == search_connection:
+            connection_found = True
+        else:
+            new_open_connections.append((host_name, connection))
+    open_connections = new_open_connections
+    return connection_found
+
+
 #################################
 # Communications functions:
 def connect_to_host(address: str, port: int, secret: str) -> tuple[bool, Connection | str]:
@@ -225,6 +246,15 @@ def get_host_status(host_name: str) -> Optional[dict[str, Any]]:
     connection = get_connection_by_name(host_name)
     if connection is None or connection.closed:
         return None
+    # Create and send the status command object:
+    command_obj: dict[str, Any] = {
+        'version': '1.0.0',
+        'command': 'status',
+    }
+    connection.send(command_obj)
+
+    # Receive the response:
+    response_obj: dict[str, Any] = connection.recv()
 
 
 
