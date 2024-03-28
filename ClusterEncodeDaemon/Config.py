@@ -9,7 +9,7 @@ import os.path
 from typing import Optional, Any, TextIO, Final
 
 _CONFIG_KEYS: Final[tuple[tuple[str, type], ...]] = (
-    ('haredWorkingDir', str), ('localWorkingDir', str), ('host', str), ('port', int), ('sharedSecret', str),
+    ('sharedWorkingDir', str), ('localWorkingDir', str), ('host', str), ('port', int), ('sharedSecret', str),
     ('numChunks', int), ('isFileHost', bool)
 )
 """Configuration keys and their types."""
