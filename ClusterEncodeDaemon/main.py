@@ -210,53 +210,65 @@ def main() -> None:
     Main loop.
     :return: None
     """
-    # Create listener
-    passwd: bytes = common.config.shared_secret.encode()
-    listener: Listener = Listener((common.config.host, common.config.port), authkey=passwd)
     running: bool = True
     while running:
         # Accept a connection:
-        common.__accept__(listener)
-
+        out_info("Waiting for connection...")
+        common.__accept__()
+        out_info("Accepted connection.")
         while True:  # Command response loop.
             # Receive the command:
+            out_info("Waiting for command...")
             command_obj: dict[str, Any] = common.__recv__()
-
+            out_info("Command received, verifying...")
             # Validate command
             if not validate_command_obj(command_obj):  # Sends an error and closes the connection.
+                out_warning("Invalid command: %s" % str(command_obj))
                 break  # The connection was closed.
-
+            out_info("Command is valid.")
             # Act on command:
             if command_obj['command'] == 'shutdown':  # Shutdown command:
+                out_info("Received shutdown command, shutting down.")
                 common.__close__()
                 running = False
                 break
             elif command_obj['command'] == 'report':  # Report settings command:
+                out_info("Received report command.")
                 common.status = 'reporting'
                 response_obj = build_report_dict()
                 common.__send__(response_obj)
                 common.status = 'idle'
             elif command_obj['command'] == 'status':  # Current status command:
+                out_info("Received status command.")
                 response_obj = build_status_dict()
                 common.__send__(response_obj)
             elif command_obj['command'] == 'split':  # Split the video command:
+                out_info("Received split command, verifying params.")
                 # Make sure params exist, and are the right type:
                 params = (('inputFile', str), ('outputDir', str), ('chunkSize', int), ('length', timedelta))
                 if not validate_command_params(command_obj, params):  # Sends an error and closes the connection.
+                    out_warning("Invalid params for split command.")
                     break  # The connection was closed.
+                out_info("Params validated, verifying values...")
                 # Parse the input file and output directory for shared / local directory:
                 input_file_path = common.parse_path(command_obj['inputFile'])
                 output_dir_path = common.parse_path(command_obj['outputDir'])
                 # Verify the input file exists:
                 if not check_file_or_directory_exists(input_file_path, True):  # Sends error and closes connection
+                    out_warning("Input path doesn't exist.")
+                    out_debug("Input path = %s" % input_file_path)
                     break  # Connection has been closed.
                 # Verify the output directory exists:
                 if not check_file_or_directory_exists(output_dir_path, False):  # Sens error and closes connection
+                    out_warning("Output directory doesn't exist.")
+                    out_debug("Output dir = %s" % output_dir_path)
                     break  # Connection has been closed.
                 # Do the split:
+                out_info("Values validated, doing split.")
                 common.status = "splitting"
                 do_split(input_file_path, output_dir_path, command_obj['chunkSize'], command_obj['length'])
                 common.status = "idle"
+                out_info("Split finished.")
             elif command_obj['command'] == 'copy_input':  # Copy input chunk to local working directory command:
                 pass
             elif command_obj['command'] == 'encode':  # Encode chunk command:
@@ -299,10 +311,10 @@ if __name__ == '__main__':
         17 = Failed to create local output working directory.
         18 = Failed to create shared input working directory.
         19 = Failed to create shared output working directory.
-        
+        20 = Failed to bind to address.
+
+
         23 = Error while trying to fork process.
-        30 = Error while sending data.
-        31 = Error while receiving data.
     """
     # Command line arguments:
     parser = argparse.ArgumentParser(description=description,
@@ -420,7 +432,7 @@ if __name__ == '__main__':
     # Override configs with command line options:
     if _args.sharedWorkingDir is not None:  # Shared working Directory:
         try:
-            common.config.shared_working_dir = _args.sharedWorkingDirectory
+            common.config.shared_working_dir = _args.sharedWorkingDir
         except (TypeError, ValueError) as e:
             out_error(e.args[0])
             exit(7)
@@ -472,6 +484,7 @@ if __name__ == '__main__':
         out_info("Saving config, and exiting.")
         try:
             common.config.save()
+            exit(0)
         except ConfigError as e:
             out_error("Failed to write config: %s" % e.message)
             exit(14)
@@ -486,7 +499,7 @@ if __name__ == '__main__':
     common.ffmpeg_cli = Ffmpegcli(ffmpeg_path)
 
     # Setup local working directory:
-    out_info("Setting up local working directory...")
+    out_info("Checking local working directory...")
     local_input_path: str = os.path.join(common.config.local_working_dir, 'Input')
     local_output_path: str = os.path.join(common.config.local_working_dir, 'Output')
 
@@ -512,7 +525,7 @@ if __name__ == '__main__':
 
     # If file host, setup shared directory:
     if common.config.is_file_host:
-        out_info("Setting up shared directory.")
+        out_info("Checking shared directory.")
         shared_input_path: str = os.path.join(common.config.shared_working_dir, 'Input')
         shared_output_path: str = os.path.join(common.config.shared_working_dir, 'Output')
         # Locate or create shared input dir:
@@ -531,8 +544,19 @@ if __name__ == '__main__':
                 out_error("Failed to create shared output directory: %s[%d]" % (e.strerror, e.errno))
                 exit(19)
 
+    # Create listener
+    out_info("Connecting to socket.")
+    passwd: bytes = common.config.shared_secret.encode()
+    try:
+        common.listener = Listener((common.config.host, common.config.port), authkey=passwd)
+    except OSError as e:
+        out_error("Failed to bind to socket: %s[%d]." % (e.strerror, e.errno))
+        exit(20)
+    out_info("Connected.")
+
     # Fork if requested:
     if _args.doFork is True:
+        out_info("Detaching from terminal")
         try:
             pid = os.fork()
             if pid == 0:  # Child process:

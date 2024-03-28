@@ -20,7 +20,8 @@ IS_DAEMON: bool = False
 """True if this process has forked or not."""
 config: Optional[Config] = None
 """The daemon config."""
-
+listener: Optional[Listener] = None
+"""The listener for the daemon."""
 connection: Optional[Connection] = None
 """The current connection."""
 ffmpeg_cli: Optional[Ffmpegcli] = None
@@ -89,13 +90,12 @@ def out_debug(message: str) -> None:
 
 #######################################
 # Connection functions:
-def __accept__(listener: Listener) -> Connection:
+def __accept__() -> Connection:
     """
-    Wait for, and return a valid connection.
-    :param listener: Listener: The listener object to connect with.
+    Wait for, and set a valid connection.
     :return: Connection: The connected Connection object.
     """
-    global connection
+    global connection, listener
     while True:
         try:
             connection = listener.accept()
