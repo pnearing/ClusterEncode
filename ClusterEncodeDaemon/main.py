@@ -406,7 +406,6 @@ if __name__ == '__main__':
         out_info("Using default config file.")
         config_file_path = default_config_file_path
 
-    out_info()
     # Create the default config if it doesn't already exist:
     if config_file_path == default_config_file_path and not os.path.exists(config_file_path):
         out_info("Default config doesn't exist, creating.")
