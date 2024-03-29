@@ -238,10 +238,12 @@ def main() -> None:
                 response_obj = build_report_dict()
                 common.__send__(response_obj)
                 common.status = 'idle'
+                out_info("Report sent.")
             elif command_obj['command'] == 'status':  # Current status command:
                 out_info("Received status command.")
                 response_obj = build_status_dict()
                 common.__send__(response_obj)
+                out_info("Status sent.")
             elif command_obj['command'] == 'split':  # Split the video command:
                 out_info("Received split command, verifying params.")
                 # Make sure params exist, and are the right type:
