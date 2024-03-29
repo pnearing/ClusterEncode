@@ -417,6 +417,7 @@ if __name__ == '__main__':
         common.config.port = 65500
         common.config.is_file_host = False
         common.config.num_chunks = 1
+        common.config.shared_secret = "<password goes here>"
         try:
             common.config.save()
         except ConfigError as e:
