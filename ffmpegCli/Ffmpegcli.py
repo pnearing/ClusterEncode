@@ -165,8 +165,8 @@ if __name__ == '__main__':
     print(_ffmpeg_cli.get_version())
 
     # Test split:
-    def _callback(report_type: str, *args) -> None:
-        print(report_type, args)
+    def _callback(report_type: str, *_args) -> None:
+        print(report_type, _args)
         return
 
     print("Starting split.")

@@ -51,9 +51,9 @@ class Config(object):
     Class to store config file stuff.
     """
     def __init__(self, file_path: str, do_load: bool = True) -> None:
-        if not os.path.exists(file_path):
+        if not os.path.exists(file_path) and do_load:
             raise ConfigError("Config file not found.", 1)
-        elif not os.path.isfile(file_path):
+        elif not os.path.isfile(file_path) and do_load:
             raise ConfigError("Config file is not a file.", error_num=2)
         self._file_path: str = file_path
         self._config: dict[str, Any] = {}
